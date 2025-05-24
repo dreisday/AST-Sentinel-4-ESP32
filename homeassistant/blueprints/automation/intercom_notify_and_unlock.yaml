@@ -1,5 +1,5 @@
 blueprint:
-  name: Intercom Notify + Unlock (MQTT)
+  name: Intercom Notify + Unlock
   description: >
     Sends a push notification when an intercom sensor changes to 'ringing'. 
     Tapping the notification opens a Lovelace view; pressing the action button triggers the intercom unlock button entity.
