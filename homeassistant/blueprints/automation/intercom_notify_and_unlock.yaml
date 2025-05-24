@@ -9,15 +9,9 @@ blueprint:
       selector:
         entity:
           domain: sensor
-    target_device:
-      name: Mobile App Device
-      selector:
-        device:
-          integration: mobile_app
-    notify_group:
-      name: Notify Group (optional)
-      description: Optional notify group to override the mobile device
-      default: ""
+    notify_service:
+      name: Notify Service
+      description: e.g. notify.mobile_app_iphone_16 or notify.notify_group
       selector:
         text:
     dashboard_path:
@@ -42,13 +36,7 @@ trigger:
     to: "ringing"
 
 action:
-  - variables:
-      device_name_clean: >
-        {{ device_attr(target_device, 'name') | lower | replace(" ", "_") | replace("'", "") }}
-      notify_target: >
-        {{ iif((notify_group | trim) != '', notify_group, "notify.mobile_app_" ~ device_name_clean) }}
-
-  - service: "{{ notify_target }}"
+  - service: !input notify_service
     data:
       title: "Intercom Ringing"
       message: "Someone is at the door. Tap to unlock."
@@ -57,7 +45,7 @@ action:
         push:
           sound:
             name: default
-            critical: "{{ iif(input.critical_notification, 1, 0) }}"
+            critical: !input critical_notification
             volume: 1.0
           badge: 1
           priority: high
