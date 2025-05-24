@@ -10,13 +10,6 @@ blueprint:
       selector:
         entity:
           domain: sensor
-    mqtt_topic:
-      name: MQTT Topic
-      description: MQTT topic to publish 'unlock' to
-      default: "intercom/command"
-    mqtt_payload:
-      name: MQTT Unlock Payload
-      default: "unlock"
     dashboard_path:
       name: Lovelace View Path
       description: Relative path like `/lovelace/security`
@@ -63,14 +56,14 @@ action:
           ttl: 30
           expiration: 30
         actions:
-          - action: UNLOCK_INTERCOM
+          - action: !input unlock_button
             title: "Unlock Door"
 
   - wait_for_trigger:
       - platform: event
         event_type: mobile_app_notification_action
         event_data:
-          action: UNLOCK_INTERCOM
+          action: !input unlock_button
     timeout: "00:00:30"
     continue_on_timeout: false
 
