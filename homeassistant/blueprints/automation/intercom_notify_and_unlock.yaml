@@ -56,14 +56,14 @@ action:
           ttl: 30
           expiration: 30
         actions:
-          - action: !input unlock_button
+          - action: UNLOCK_DOOR
             title: "Unlock Door"
 
   - wait_for_trigger:
       - platform: event
         event_type: mobile_app_notification_action
         event_data:
-          action: !input unlock_button
+          action: UNLOCK_DOOR
     timeout: "00:00:30"
     continue_on_timeout: false
 
