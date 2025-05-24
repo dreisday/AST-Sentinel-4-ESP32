@@ -9,12 +9,17 @@ blueprint:
       selector:
         entity:
           domain: sensor
-    notify_entity:
-      name: Notify Service
-      description: The notify.* entity or group to send the notification to
+    target_device:
+      name: Mobile App Device
       selector:
-        entity:
-          domain: notify
+        device:
+          integration: mobile_app
+    notify_group:
+      name: Notify Group (optional)
+      description: Optional notify group to override the mobile device
+      default: ""
+      selector:
+        text:
     dashboard_path:
       name: Lovelace View Path
       default: "/lovelace/security"
@@ -37,7 +42,13 @@ trigger:
     to: "ringing"
 
 action:
-  - service: !input notify_entity
+  - variables:
+      device_name_clean: >
+        {{ device_attr(target_device, 'name') | lower | replace(" ", "_") | replace("'", "") }}
+      notify_target: >
+        {{ iif((notify_group | trim) != '', notify_group, "notify.mobile_app_" ~ device_name_clean) }}
+
+  - service: "{{ notify_target }}"
     data:
       title: "Intercom Ringing"
       message: "Someone is at the door. Tap to unlock."
