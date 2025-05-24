@@ -1,8 +1,7 @@
 blueprint:
-  name: Intercom Notify + Unlock
+  name: Intercom Notification with Unlock Button
   description: >
-    Sends a push notification when an intercom sensor changes to 'ringing'. 
-    Tapping the notification opens a Lovelace view; pressing the action button triggers the intercom unlock button entity.
+    Sends a push notification when the intercom rings. Tapping the action button triggers a specified button entity.
   domain: automation
   input:
     intercom_sensor:
@@ -10,27 +9,25 @@ blueprint:
       selector:
         entity:
           domain: sensor
+    notify_entity:
+      name: Notify Service
+      description: The notify.* entity or group to send the notification to
+      selector:
+        entity:
+          domain: notify
     dashboard_path:
       name: Lovelace View Path
-      description: Relative path like `/lovelace/security`
       default: "/lovelace/security"
-    target_device:
-      name: Mobile App Device
-      selector:
-        device:
-          integration: mobile_app
-    critical_notification:
-      name: Send Critical Notification
-      description: If enabled, notification will bypass Do Not Disturb
-      default: true
-      selector:
-        boolean: {}
     unlock_button:
-      name: Unlock Button Entity
-      description: The Home Assistant button entity that triggers unlock
+      name: Button to Press
       selector:
         entity:
           domain: button
+    critical_notification:
+      name: Send Critical Notification
+      default: true
+      selector:
+        boolean: {}
 
 mode: single
 
@@ -40,7 +37,7 @@ trigger:
     to: "ringing"
 
 action:
-  - service: notify.mobile_app_{{ device_attr(target_device, 'name')|lower|replace(" ", "_") }}
+  - service: !input notify_entity
     data:
       title: "Intercom Ringing"
       message: "Someone is at the door. Tap to unlock."
@@ -56,14 +53,14 @@ action:
           ttl: 30
           expiration: 30
         actions:
-          - action: UNLOCK_DOOR
+          - action: UNLOCK_INTERCOM
             title: "Unlock Door"
 
   - wait_for_trigger:
       - platform: event
         event_type: mobile_app_notification_action
         event_data:
-          action: UNLOCK_DOOR
+          action: UNLOCK_INTERCOM
     timeout: "00:00:30"
     continue_on_timeout: false
 
