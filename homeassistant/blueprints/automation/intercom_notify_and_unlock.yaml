@@ -2,7 +2,7 @@ blueprint:
   name: Intercom Notify + Unlock (MQTT)
   description: >
     Sends a push notification when an intercom sensor changes to 'ringing'. 
-    Tapping the notification opens a Lovelace view; pressing the action button sends an MQTT unlock command.
+    Tapping the notification opens a Lovelace view; pressing the action button triggers the intercom unlock button entity.
   domain: automation
   input:
     intercom_sensor:
@@ -32,6 +32,12 @@ blueprint:
       default: true
       selector:
         boolean: {}
+    unlock_button:
+      name: Unlock Button Entity
+      description: The Home Assistant button entity that triggers unlock
+      selector:
+        entity:
+          domain: button
 
 mode: single
 
@@ -68,7 +74,6 @@ action:
     timeout: "00:00:30"
     continue_on_timeout: false
 
-  - service: mqtt.publish
-    data:
-      topic: !input mqtt_topic
-      payload: !input mqtt_payload
+  - service: button.press
+    target:
+      entity_id: !input unlock_button
