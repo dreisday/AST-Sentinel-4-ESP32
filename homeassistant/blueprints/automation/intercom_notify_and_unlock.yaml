@@ -1,0 +1,74 @@
+blueprint:
+  name: Intercom Notify + Unlock (MQTT)
+  description: >
+    Sends a push notification when an intercom sensor changes to 'ringing'. 
+    Tapping the notification opens a Lovelace view; pressing the action button sends an MQTT unlock command.
+  domain: automation
+  input:
+    intercom_sensor:
+      name: Intercom Status Sensor
+      selector:
+        entity:
+          domain: sensor
+    mqtt_topic:
+      name: MQTT Topic
+      description: MQTT topic to publish 'unlock' to
+      default: "intercom/command"
+    mqtt_payload:
+      name: MQTT Unlock Payload
+      default: "unlock"
+    dashboard_path:
+      name: Lovelace View Path
+      description: Relative path like `/lovelace/security`
+      default: "/lovelace/security"
+    target_device:
+      name: Mobile App Device
+      selector:
+        device:
+          integration: mobile_app
+    critical_notification:
+      name: Send Critical Notification
+      description: If enabled, notification will bypass Do Not Disturb
+      default: true
+      selector:
+        boolean: {}
+
+mode: single
+
+trigger:
+  - platform: state
+    entity_id: !input intercom_sensor
+    to: "ringing"
+
+action:
+  - service: notify.mobile_app_{{ device_attr(target_device, 'name')|lower|replace(" ", "_") }}
+    data:
+      title: "Intercom Ringing"
+      message: "Someone is at the door. Tap to unlock."
+      data:
+        url: !input dashboard_path
+        push:
+          sound:
+            name: default
+            critical: "{{ iif(input.critical_notification, 1, 0) }}"
+            volume: 1.0
+          badge: 1
+          priority: high
+          ttl: 30
+          expiration: 30
+        actions:
+          - action: UNLOCK_INTERCOM
+            title: "Unlock Door"
+
+  - wait_for_trigger:
+      - platform: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: UNLOCK_INTERCOM
+    timeout: "00:00:30"
+    continue_on_timeout: false
+
+  - service: mqtt.publish
+    data:
+      topic: !input mqtt_topic
+      payload: !input mqtt_payload
