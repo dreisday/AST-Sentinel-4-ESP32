@@ -24,7 +24,7 @@ blueprint:
         text:
     lovelace_dashboard:
       name: Lovelace Dashboard to Open
-      description: The dashboard view to be opened when the notification is tapped.
+      description: The dashboard view to be opened when the notification is tapped e.g. /lovelace/security
       selector:
         text:
     critical_notification:
