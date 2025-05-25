@@ -1,68 +1,78 @@
 blueprint:
-  name: Intercom Notification with Unlock Button
-  description: >
-    Sends a push notification when the intercom rings. Tapping the action button triggers a specified button entity.
+  name: Intercom Ring Notification and Unlock
+  description: |
+    Sends a mobile notification when the intercom rings with an action button to unlock the door.
+    Unlocks the intercom when the notification action is pressed.
   domain: automation
   input:
-    intercom_sensor:
+    intercom_status_sensor:
       name: Intercom Status Sensor
+      description: Sensor that goes to 'ringing' when the intercom rings.
       selector:
         entity:
           domain: sensor
-    notify_service:
-      name: Notify Service
-      description: e.g. notify.mobile_app_iphone_16 or notify.notify_group
-      selector:
-        text:
-    dashboard_path:
-      name: Lovelace View Path
-      default: "/lovelace/security"
     unlock_button:
-      name: Button to Press
+      name: Unlock Button Entity
+      description: The button entity that triggers the door unlock.
       selector:
         entity:
           domain: button
+    mobile_notification_target:
+      name: Mobile Notification Target
+      description: The notify service name for mobile devices (e.g., notify.mobile_app_iphone).
+      selector:
+        text:
     critical_notification:
-      name: Send Critical Notification
+      name: Critical Notification
+      description: Should the notification be marked as critical with sound? This will bypass Do Not Disturb mode.
       default: true
       selector:
         boolean: {}
 
-mode: single
+variables:
+    notification_critical: !input critical_notification
 
 trigger:
   - platform: state
-    entity_id: !input intercom_sensor
-    to: "ringing"
+    entity_id: !input intercom_status_sensor
+    to: ringing
+
+  - platform: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: UNLOCK_INTERCOM
 
 action:
-  - service: !input notify_service
-    data:
-      title: "Intercom Ringing"
-      message: "Someone is at the door. Tap to unlock."
-      data:
-        url: !input dashboard_path
-        push:
-          sound:
-            name: default
-            critical: !input critical_notification
-            volume: 1.0
-          badge: 1
-          priority: high
-          ttl: 30
-          expiration: 30
-        actions:
-          - action: UNLOCK_INTERCOM
-            title: "Unlock Door"
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.platform == 'state' }}"
+        sequence:
+          - service: !input mobile_notification_target
+            data:
+              title: Intercom Ringing
+              message: Someone is at the door. Tap to unlock.
+              data:
+                url: /lovelace/security
+                push:
+                  sound:
+                    name: default
+                    critical: '{{ iif(notification_critical, 1, 0) }}'
+                    volume: 1
+                  badge: 1
+                  priority: high
+                  ttl: 30
+                  expiration: 30
+                actions:
+                  - action: UNLOCK_INTERCOM
+                    title: Unlock Door
 
-  - wait_for_trigger:
-      - platform: event
-        event_type: mobile_app_notification_action
-        event_data:
-          action: UNLOCK_INTERCOM
-    timeout: "00:00:30"
-    continue_on_timeout: false
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.platform == 'event' }}"
+        sequence:
+          - service: button.press
+            target:
+              entity_id: !input unlock_button
 
-  - service: button.press
-    target:
-      entity_id: !input unlock_button
+mode: single
