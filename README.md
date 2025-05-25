@@ -27,7 +27,7 @@ A DIY intercom automation project using an ESP32, MQTT, and Home Assistant to pr
 ## Arduino Setup
 
 See `arduino/esp32_intercom.ino` for the sketch. Requires:
-- PubSubClient - modified library with MQTT_MAX_PACKET_SIZE 512 is included, clone this repo if you wish to use it. Otherwise change the `#include` statement to point to your own modified PubSubClient.h
+- PubSubClient - modified library with `MQTT_MAX_PACKET_SIZE 512` is included, clone this repo if you wish to use it. Otherwise change the `#include` statement to point to your own modified PubSubClient.h
 - WiFi
 - ArduinoJson
 
@@ -39,7 +39,7 @@ Enter your WiFi and MQTT details into the variables at the top of the sketch, or
 
 ## Home Assistant
 
-Use the blueprint in `home-assistant/blueprints/automation/` to set up the automation.
+Use the blueprint in `homeassistant/blueprints/automation/` to set up the automation.
 
 ## License
 
