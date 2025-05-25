@@ -1,5 +1,5 @@
 #include <WiFi.h>
-#include "lib/PubSubClient/PubSubClient.h"
+#include <PubSubClient.h>
 #include <ArduinoJson.h>
 
 // WiFi & MQTT Configuration
@@ -25,6 +25,7 @@ State currentState = IDLE;
 unsigned long unlockTime = 0;
 WiFiClient intercom_esp;
 PubSubClient client(intercom_esp);
+client.setBufferSize(512);
 
 // Helper: Publish current status to MQTT
 void publish_status(const char* status) {
