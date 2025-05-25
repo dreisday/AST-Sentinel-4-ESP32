@@ -16,6 +16,7 @@ A DIY intercom automation project using an ESP32, MQTT, and Home Assistant to pr
 
 - Play pre-recorded audio through intercom when door is unlocked
 - Implement 2-way audio
+- Interface ESP32 directly with data U/D pins to remove need for relays
 
 ## Parts List
 
