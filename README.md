@@ -26,7 +26,7 @@ See `arduino/esp32_intercom.ino` for the sketch. Requires:
 
 ## Wiring
 
-Schematic to be inserted... TBD
+![Wiring Schematic](https://raw.githubusercontent.com/dreisday/AST-Sentinel-4-ESP32/refs/heads/main/intercom%20schematic.png)
 
 ## Home Assistant
 
