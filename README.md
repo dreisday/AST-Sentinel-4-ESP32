@@ -13,7 +13,7 @@ A DIY intercom automation project using an ESP32, MQTT, and Home Assistant to pr
 
 ## Parts List
 
-- 3 x Relays - I used these boards that include the optocouplers and a jumper to choose high/low triggering https://www.bitsboxuk.com/index.php?main_page=product_info&cPath=253&products_id=4071
+- 3 x Relays - I used [these boards](https://www.bitsboxuk.com/index.php?main_page=product_info&cPath=253&products_id=4071) that include the optocouplers and a jumper to choose high/low triggering. You could use a single 4-way board, or I used a 2-way and a single to better fit in my case.
 - 12v to 5v Buck Converter
 - ESP32 Dev Board
 

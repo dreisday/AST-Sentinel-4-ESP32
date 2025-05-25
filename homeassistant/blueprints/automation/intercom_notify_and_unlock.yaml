@@ -22,6 +22,11 @@ blueprint:
       description: The notify service name for mobile devices (e.g., notify.mobile_app_iphone).
       selector:
         text:
+    lovelace_dashboard:
+      name: Lovelace Dashboard to Open
+      description: The dashboard view to be opened when the notification is tapped.
+      selector:
+        text:
     critical_notification:
       name: Critical Notification
       description: Should the notification be marked as critical with sound? This will bypass Do Not Disturb mode.
@@ -53,7 +58,7 @@ action:
               title: Intercom Ringing
               message: Someone is at the door. Tap to unlock.
               data:
-                url: /lovelace/security
+                url: !input lovelace_dashboard
                 push:
                   sound:
                     name: default
