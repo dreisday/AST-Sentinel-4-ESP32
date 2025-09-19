@@ -12,7 +12,11 @@ const char* mqtt_user = MQTT_USER;
 const char* mqtt_pass = MQTT_PASS;
 
 // MQTT Topics
-// MQTT Availability and HA Discovery Topics
+// MQTT HA Discovery Topics
+// Common
+const char* deviceName = "ESP32 Intercom"; // Name of the device - this can be changed and is displayed in Home Assistant
+
+//  Connection Availability
 const char* availabilityTopic = "intercom/connection/status";
 const char* availabilityPayloadOnline = "online";
 const char* availabilityPayloadOffline = "offline";
@@ -49,7 +53,7 @@ void publish_discovery() {
   // Common device info
   JsonObject device = doc.createNestedObject("device");
   device["identifiers"][0] = "esp32-intercom";
-  device["name"] = "ESP32 Intercom"; // Name of the device - this can be changed and is displayed in Home Assistant
+  device["name"] = deviceName; 
   device["manufacturer"] = "DIY";
   device["model"] = "ESP32 MQTT Intercom";
 
@@ -63,7 +67,7 @@ void publish_discovery() {
   doc["payload_off"] = "offline";
   device = doc.createNestedObject("device");
   device["identifiers"][0] = "esp32-intercom";
-  device["name"] = "ESP32 Intercom";
+  device["name"] = deviceName;
   device["model"] = "ESP32";
   device["manufacturer"] = "Custom";
 
@@ -89,7 +93,7 @@ void publish_discovery() {
   doc["payload_press"] = "unlock";
   device = doc.createNestedObject("device");
   device["identifiers"][0] = "esp32-intercom";
-  device["name"] = "ESP32 Intercom";
+  device["name"] = deviceName;
   device["manufacturer"] = "DIY";
   device["model"] = "ESP32 MQTT Intercom";
 
