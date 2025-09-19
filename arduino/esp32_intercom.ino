@@ -1,16 +1,23 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include "secrets.h"
 
-// WiFi & MQTT Configuration
-const char* ssid = "InsertYourSSID";
-const char* password = "InsertYourWiFiPassword";
-const char* mqtt_server = "InsertYourMQTTServer"; // e.g. "mqtt.example.com"
-const int mqtt_port = 1883; // Default MQTT port change if needed
-const char* mqtt_user = "YourMQTTUsername"; // Optional, if your broker requires authentication
-const char* mqtt_pass = "YourMQTTPassword"; // Optional, if your broker requires authentication
+// WiFi & MQTT Configuration ------ taken from secrets.h by default, alteratively enter as a string  ------
+const char* ssid = WIFI_SSID;
+const char* password = WIFI_PASSWORD;
+const char* mqtt_server = MQTT_SERVER;
+const int mqtt_port = MQTT_PORT;
+const char* mqtt_user = MQTT_USER;
+const char* mqtt_pass = MQTT_PASS;
 
 // MQTT Topics
+// MQTT Availability and HA Discovery Topics
+const char* availabilityTopic = "intercom/connection/status";
+const char* availabilityPayloadOnline = "online";
+const char* availabilityPayloadOffline = "offline";
+const char* haDiscoveryTopic = "homeassistant/sensor/intercom_connection_status/config";
+
 const char* status_topic = "intercom/status";
 const char* command_topic = "intercom/command";
 
@@ -25,7 +32,7 @@ State currentState = IDLE;
 unsigned long unlockTime = 0;
 WiFiClient intercom_esp;
 PubSubClient client(intercom_esp);
-client.setBufferSize(512);
+
 
 // Helper: Publish current status to MQTT
 void publish_status(const char* status) {
@@ -35,6 +42,7 @@ void publish_status(const char* status) {
 
 // MQTT Discovery with Device Block
 void publish_discovery() {
+
   // Allocate buffer (adjust size if needed)
   StaticJsonDocument<512> doc;
 
@@ -44,6 +52,24 @@ void publish_discovery() {
   device["name"] = "ESP32 Intercom"; // Name of the device - this can be changed and is displayed in Home Assistant
   device["manufacturer"] = "DIY";
   device["model"] = "ESP32 MQTT Intercom";
+
+  // Intercom connection status sensor
+  doc["name"] = "Intercom Connection Status";
+  doc["state_topic"] = availabilityTopic;
+  doc["availability_topic"] = availabilityTopic;
+  doc["unique_id"] = "intercom_connection_status";
+  doc["device_class"] = "connectivity";
+  doc["payload_on"] = "online";
+  doc["payload_off"] = "offline";
+  device = doc.createNestedObject("device");
+  device["identifiers"][0] = "esp32-intercom";
+  device["name"] = "ESP32 Intercom";
+  device["model"] = "ESP32";
+  device["manufacturer"] = "Custom";
+
+  char availBuffer[512];
+  serializeJson(doc, availBuffer);
+  client.publish(haDiscoveryTopic, availBuffer, true);
 
   // --- Sensor discovery ---
   doc["name"] = "Intercom Status";
@@ -93,7 +119,9 @@ void setup_wifi() {
 void reconnect() {
   while (!client.connected()) {
     Serial.println("Attempting MQTT connection...");
-    if (client.connect("ESP32Intercom", mqtt_user, mqtt_pass)) {
+    if (client.connect("ESP32Intercom", mqtt_user, mqtt_pass, availabilityTopic, 0, true, availabilityPayloadOffline)) {
+    client.publish(availabilityTopic, availabilityPayloadOnline, true);
+    publish_discovery();
       Serial.println("MQTT connected.");
 
       // Subscribe to command topic
@@ -144,12 +172,28 @@ void setup() {
 
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
+  client.setBufferSize(512);
   client.setCallback(mqtt_callback);
 }
 
 String lastPublishedStatus = "";
 
 void loop() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi disconnected, attempting reconnect...");
+    WiFi.begin(ssid, password);
+    delay(1000);
+    return;
+  }
+
+  if (!client.connected()) {
+    Serial.println("MQTT disconnected, attempting reconnect...");
+    if (client.connect("ESP32Intercom", mqtt_user, mqtt_pass, availabilityTopic, 0, true, availabilityPayloadOffline)) {
+      client.publish(availabilityTopic, availabilityPayloadOnline, true);
+      publish_discovery();
+    }
+  }
+
   if (!client.connected()) reconnect();
   client.loop();
 
