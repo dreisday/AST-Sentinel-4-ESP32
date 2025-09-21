@@ -20,7 +20,6 @@ const char* deviceName = "ESP32 Intercom"; // Name of the device - this can be c
 const char* availabilityTopic = "intercom/connection/status";
 const char* availabilityPayloadOnline = "online";
 const char* availabilityPayloadOffline = "offline";
-const char* haDiscoveryTopic = "homeassistant/sensor/intercom_connection_status/config";
 
 const char* status_topic = "intercom/status";
 const char* command_topic = "intercom/command";
@@ -47,17 +46,9 @@ void publish_status(const char* status) {
 // MQTT Discovery with Device Block
 void publish_discovery() {
 
-  // Allocate buffer (adjust size if needed)
   StaticJsonDocument<512> doc;
 
-  // Common device info
-  JsonObject device = doc.createNestedObject("device");
-  device["identifiers"][0] = "esp32-intercom";
-  device["name"] = deviceName; 
-  device["manufacturer"] = "DIY";
-  device["model"] = "ESP32 MQTT Intercom";
-
-  // Intercom connection status sensor
+  // --- Availability sensor ---
   doc["name"] = "Intercom Connection Status";
   doc["state_topic"] = availabilityTopic;
   doc["availability_topic"] = availabilityTopic;
@@ -65,21 +56,29 @@ void publish_discovery() {
   doc["device_class"] = "connectivity";
   doc["payload_on"] = "online";
   doc["payload_off"] = "offline";
-  device = doc.createNestedObject("device");
+
+  JsonObject device = doc.createNestedObject("device");
   device["identifiers"][0] = "esp32-intercom";
   device["name"] = deviceName;
-  device["model"] = "ESP32";
-  device["manufacturer"] = "Custom";
+  device["manufacturer"] = "DIY";
+  device["model"] = "ESP32 MQTT Intercom";
 
   char availBuffer[512];
   serializeJson(doc, availBuffer);
-  client.publish(haDiscoveryTopic, availBuffer, true);
+  client.publish("homeassistant/binary_sensor/intercom_connection_status/config", availBuffer, true);
 
   // --- Sensor discovery ---
+  doc.clear();
   doc["name"] = "Intercom Status";
-  doc["unique_id"] = "intercom_status_sensor";
   doc["state_topic"] = status_topic;
+  doc["unique_id"] = "intercom_status_sensor";
   doc["icon"] = "mdi:phone";
+
+  device = doc.createNestedObject("device");
+  device["identifiers"][0] = "esp32-intercom";
+  device["name"] = deviceName;
+  device["manufacturer"] = "DIY";
+  device["model"] = "ESP32 MQTT Intercom";
 
   char sensorBuffer[512];
   serializeJson(doc, sensorBuffer);
@@ -91,6 +90,7 @@ void publish_discovery() {
   doc["unique_id"] = "intercom_unlock_button";
   doc["command_topic"] = command_topic;
   doc["payload_press"] = "unlock";
+
   device = doc.createNestedObject("device");
   device["identifiers"][0] = "esp32-intercom";
   device["name"] = deviceName;
@@ -103,7 +103,6 @@ void publish_discovery() {
 
   Serial.println("Discovery messages published.");
 }
-
 
 // WiFi setup
 void setup_wifi() {
@@ -126,6 +125,7 @@ void reconnect() {
     if (client.connect("ESP32Intercom", mqtt_user, mqtt_pass, availabilityTopic, 0, true, availabilityPayloadOffline)) {
     client.publish(availabilityTopic, availabilityPayloadOnline, true);
     publish_discovery();
+    client.subscribe(command_topic);
       Serial.println("MQTT connected.");
 
       // Subscribe to command topic
@@ -194,8 +194,9 @@ void loop() {
     Serial.println("MQTT disconnected, attempting reconnect...");
     if (client.connect("ESP32Intercom", mqtt_user, mqtt_pass, availabilityTopic, 0, true, availabilityPayloadOffline)) {
       client.publish(availabilityTopic, availabilityPayloadOnline, true);
-      publish_discovery();
-    }
+            publish_discovery();
+            client.subscribe(command_topic);
+          }
   }
 
   if (!client.connected()) reconnect();
