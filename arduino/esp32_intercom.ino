@@ -187,19 +187,19 @@ void loop() {
     Serial.println("WiFi disconnected, attempting reconnect...");
     WiFi.begin(ssid, password);
     delay(1000);
+    // Reset state after WiFi reconnect
+    unlockTime = 0;
+    lastPublishedStatus = "";
     return;
   }
 
+  // Always call reconnect if MQTT is disconnected
   if (!client.connected()) {
-    Serial.println("MQTT disconnected, attempting reconnect...");
-    if (client.connect("ESP32Intercom", mqtt_user, mqtt_pass, availabilityTopic, 0, true, availabilityPayloadOffline)) {
-      client.publish(availabilityTopic, availabilityPayloadOnline, true);
-            publish_discovery();
-            client.subscribe(command_topic);
-          }
+    reconnect();
+    // Reset state after MQTT reconnect
+    unlockTime = 0;
+    lastPublishedStatus = "";
   }
-
-  if (!client.connected()) reconnect();
   client.loop();
 
   // Read pin states
