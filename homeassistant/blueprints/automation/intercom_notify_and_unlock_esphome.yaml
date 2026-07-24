@@ -1,0 +1,88 @@
+blueprint:
+  name: Intercom Ring Notification and Unlock (ESPHome)
+  description: |
+    For the ESPHome-based ESP32 intercom firmware (see ../../../esphome/esp32_intercom.yaml),
+    connected via the Home Assistant native API.
+    Sends a mobile notification when the intercom rings with an action button to unlock the door.
+    Unlocks the intercom when the notification action is pressed.
+
+    Note: device connectivity is tracked automatically by the ESPHome integration, so unlike the
+    MQTT variant of this blueprint there is no separate availability/connection sensor to select.
+  domain: automation
+  input:
+    intercom_status_sensor:
+      name: Intercom Status Sensor
+      description: The "Intercom Status" sensor entity created by the ESPHome device. Goes to 'ringing' when the intercom rings.
+      selector:
+        entity:
+          domain: sensor
+    unlock_button:
+      name: Unlock Button Entity
+      description: The "Unlock Intercom" button entity created by the ESPHome device.
+      selector:
+        entity:
+          domain: button
+    mobile_notification_target:
+      name: Mobile Notification Target
+      description: The notify service name for mobile devices (e.g., notify.mobile_app_iphone).
+      selector:
+        text:
+    lovelace_dashboard:
+      name: Lovelace Dashboard to Open
+      description: The dashboard view to be opened when the notification is tapped e.g. /lovelace/security
+      selector:
+        text:
+    critical_notification:
+      name: Critical Notification
+      description: Should the notification be marked as critical with sound? This will bypass Do Not Disturb mode.
+      default: true
+      selector:
+        boolean: {}
+
+variables:
+    notification_critical: !input critical_notification
+
+trigger:
+  - platform: state
+    entity_id: !input intercom_status_sensor
+    to: ringing
+
+  - platform: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: UNLOCK_INTERCOM
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.platform == 'state' }}"
+        sequence:
+          - service: !input mobile_notification_target
+            data:
+              title: Intercom Ringing
+              message: Someone is at the door. Tap to unlock.
+              data:
+                url: !input lovelace_dashboard
+                push:
+                  sound:
+                    name: default
+                    critical: '{{ iif(notification_critical, 1, 0) }}'
+                    volume: 1
+                  badge: 1
+                  priority: high
+                  ttl: 30
+                  expiration: 30
+                actions:
+                  - action: UNLOCK_INTERCOM
+                    title: Unlock Door
+
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.platform == 'event' }}"
+        sequence:
+          - service: button.press
+            target:
+              entity_id: !input unlock_button
+
+mode: single

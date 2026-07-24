@@ -1,0 +1,113 @@
+substitutions:
+  device_name: "esp32-intercom"
+  friendly_name: "ESP32 Intercom"
+
+  # GPIO pins - same wiring as the MQTT/Arduino sketch, see ../mqtt/esp32_intercom.ino
+  ring_pin: GPIO13        # Input from ring detect relay
+  answer_relay_pin: GPIO12 # Relay to unlatch handset
+  unlock_relay_pin: GPIO14 # Relay to short D to GND
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+  comment: "AST Sentinel 4 intercom automation (ESP-IDF, native API)"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+# Enable logging over serial/USB
+logger:
+
+# Native Home Assistant API - replaces MQTT for state/commands.
+# HA automatically tracks this device's connectivity, so no manual
+# availability/LWT sensor is needed like in the MQTT version.
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Fallback hotspot if wifi_ssid can't be reached, so the device can still be reflashed/reconfigured.
+  ap:
+    ssid: "${friendly_name} Fallback"
+    password: !secret ap_password
+
+captive_portal:
+
+switch:
+  - platform: gpio
+    id: answer_relay
+    pin:
+      number: ${answer_relay_pin}
+    restore_mode: ALWAYS_OFF
+    internal: true
+
+  - platform: gpio
+    id: unlock_relay
+    pin:
+      number: ${unlock_relay_pin}
+    restore_mode: ALWAYS_OFF
+    internal: true
+
+binary_sensor:
+  - platform: gpio
+    id: ring_detect
+    internal: true
+    pin:
+      number: ${ring_pin}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on: 50ms
+      - delayed_off: 50ms
+
+text_sensor:
+  - platform: template
+    name: "Intercom Status"
+    icon: mdi:phone
+    update_interval: 1s
+    lambda: |-
+      if (id(unlock_relay).state) {
+        return std::string("unlocked");
+      } else if (id(answer_relay).state) {
+        return std::string("answered");
+      } else if (id(ring_detect).state) {
+        return std::string("ringing");
+      }
+      return std::string("idle");
+
+# Answers the intercom, waits 1.5s, then unlocks - matching the MQTT
+# firmware's timing. Only runs while the intercom is actively ringing
+# (safety interlock, same as mqtt_callback() in the Arduino sketch).
+# Relays auto-release 10s after unlocking.
+script:
+  - id: unlock_sequence
+    mode: single
+    then:
+      - if:
+          condition:
+            binary_sensor.is_on: ring_detect
+          then:
+            - switch.turn_on: answer_relay
+            - delay: 1500ms
+            - switch.turn_on: unlock_relay
+            - delay: 10s
+            - switch.turn_off: unlock_relay
+            - switch.turn_off: answer_relay
+
+button:
+  - platform: template
+    name: "Unlock Intercom"
+    icon: mdi:lock-open-variant
+    on_press:
+      - script.execute: unlock_sequence

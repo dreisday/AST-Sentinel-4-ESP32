@@ -1,3 +1,4 @@
-arduino/secrets.h
+mqtt/secrets.h
+esphome/secrets.yaml
 .vscode/
 copilot-instructions.md

@@ -1,6 +1,7 @@
 blueprint:
-  name: Intercom Ring Notification and Unlock
+  name: Intercom Ring Notification and Unlock (MQTT)
   description: |
+    For the MQTT-based ESP32 intercom firmware (see ../../../mqtt/esp32_intercom.ino).
     Sends a mobile notification when the intercom rings with an action button to unlock the door.
     Unlocks the intercom when the notification action is pressed.
   domain: automation
